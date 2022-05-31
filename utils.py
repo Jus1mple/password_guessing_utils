@@ -7,6 +7,7 @@ import collections
 from itertools import count
 from torch.utils import data
 import torch
+import torch.nn as nn
 
 UNK = '<unk>'
 BOS = '<bos>'
@@ -255,6 +256,20 @@ def max_padding(line, vocab:Vocab, max_len = 31, padding_pattern = PAD):
     if len(line) >= max_len:
         return line[:max_len]
     return line + [padding_pattern if isinstance(line[0], str) else vocab[padding_pattern]] * (max_len - len(line))
+
+
+def grad_clipping(net, theta):
+    """Clip the gradient.
+
+    Defined in :numref:`sec_rnn_scratch`"""
+    if isinstance(net, nn.Module):
+        params = [p for p in net.parameters() if p.requires_grad]
+    else:
+        params = net.params
+    norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params))
+    if norm > theta:
+        for param in params:
+            param.grad[:] *= theta / norm
 
 
 

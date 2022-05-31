@@ -17,7 +17,7 @@ def rnn_train(model : RNNModel, train_iter, vocab, lr, num_epochs, device):
     else:
         updater = lambda batch_size : utils.sgd(model.params, lr, batch_size)
     predict = lambda prefix : predictor.predict_rnn(model = model, prefix = prefix, vocab = vocab, device = device)
-    for epoch in range(num_epochs):
+    for _ in range(num_epochs):
         # epoch train
         state = None
         for X, Y in train_iter:
@@ -32,4 +32,15 @@ def rnn_train(model : RNNModel, train_iter, vocab, lr, num_epochs, device):
                         s.detach_()
             y = Y.T.reshape(-1)
             X, y = X.to(device), y.to(device)
-            
+            y_hat, state = model(y, state)
+            l = loss(y_hat, y.long()).mean()
+            if isinstance(updater, optim.Optimizer):
+                updater.zero_grad()
+                l.backward()
+                utils.grad_clipping(model, 1)
+                updater.step()
+            else:
+                l.backward()
+                utils.grad_clipping(model, 1)
+                updater(batch_size = 1)
+    
